@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supercritical Hopf Bifurcation · Visualizer</title>
+    <style>
+        :root {
+            --bg-gradient-start: #f3f0ff;
+            --bg-gradient-end: #e8f0fe;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(255, 255, 255, 0.6);
+            --text-primary: #1e1e3f;
+            --text-secondary: #5f6b8a;
+            --accent: #5b6af0;
+            --accent-soft: #eef0ff;
+            --stable: #3182ce;
+            --hopf: #d69e2e;
+            --unstable: #e53e3e;
+            --limit-cycle: #2f855a;
+            --trajectory-color: #1E3A8A;   /* deep blue */
+            --slider-track: #d4d9f0;
+            --button-bg: #ffffff;
+            --button-hover-bg: #f1f4ff;
+            --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.08);
+            --radius-card: 24px;
+            --font-heading: 'Cormorant Garamond', 'Times New Roman', serif;
+            --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 30px 15px 50px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-lg);
+            max-width: 1000px;
+            width: 100%;
+            padding: 32px 34px 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding-bottom: 18px;
+            margin-bottom: 2px;
+        }
+        header h1 {
+            font-family: var(--font-heading);
+            font-size: 2.2rem;
+            font-weight: 500;
+            letter-spacing: 0.4px;
+            margin-bottom: 6px;
+            color: #1a1a40;
+        }
+        header .subtitle {
+            font-family: var(--font-mono);
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+            background: #f8f9fe;
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .main-content {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .canvas-wrapper {
+            flex-shrink: 0;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(0,0,0,0.04);
+            overflow: hidden;
+            line-height: 0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .canvas-wrapper:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 38px rgba(0, 0, 0, 0.1);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 600px;
+            background: #fdfdfd;
+        }
+
+        .info-panel {
+            flex: 1;
+            min-width: 250px;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            font-size: 0.88rem;
+        }
+        .info-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.75);
+            border-radius: 18px;
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.25s ease;
+        }
+        .info-card:hover {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: var(--shadow-md);
+        }
+        .info-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2d2d50;
+            letter-spacing: 0.3px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+            font-size: 0.88rem;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .info-value {
+            font-weight: 600;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #2d2d50;
+        }
+
+        .stability-badge {
+            display: inline-block;
+            padding: 7px 18px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.4px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .badge-container {
+            text-align: center;
+            margin: 10px 0;
+        }
+        .stable-spiral {
+            background: #e6f0ff;
+            color: #1a5f8a;
+            border: 1px solid rgba(49, 130, 206, 0.2);
+        }
+        .hopf-point {
+            background: #fff8e6;
+            color: #8a6d14;
+            border: 1px solid rgba(214, 158, 46, 0.2);
+        }
+        .unstable-spiral {
+            background: #ffe6e6;
+            color: #8a1f1f;
+            border: 1px solid rgba(229, 62, 62, 0.2);
+        }
+        .limit-cycle-info {
+            display: flex !important;
+        }
+        #limitCycleRadius {
+            color: var(--limit-cycle);
+            font-weight: 700;
+        }
+        .description {
+            font-size: 0.8rem;
+            color: #5f6b8a;
+            margin-top: 8px;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.78rem;
+            color: #4a5568;
+            margin-top: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .equilibrium {
+            background: #1a1a2e;
+        }
+        .direction-field {
+            background: #7b8ba8;
+        }
+        .legend-dash {
+            width: 18px;
+            height: 3px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            background: var(--limit-cycle);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 18px;
+            padding: 16px 6px 0;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            margin-top: 4px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-group label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #2d2d50;
+            letter-spacing: 0.5px;
+        }
+        .lambda-display {
+            font-family: var(--font-mono);
+            font-size: 1.15rem;
+            font-weight: 700;
+            min-width: 54px;
+            text-align: center;
+            padding: 4px 10px;
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        .lambda-neg { color: var(--stable); background: #e6f0ff; }
+        .lambda-zero { color: var(--hopf); background: #fff8e6; }
+        .lambda-pos { color: var(--unstable); background: #ffe6e6; }
+
+        .range-limit {
+            font-size: 0.8rem;
+            color: #8890b0;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 200px;
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #cbd5e0, var(--accent-soft));
+            outline: none;
+            cursor: pointer;
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid var(--accent);
+            box-shadow: 0 2px 8px rgba(91,106,240,0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.12);
+            box-shadow: 0 4px 12px rgba(91,106,240,0.4);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid var(--accent);
+            box-shadow: 0 2px 8px rgba(91,106,240,0.3);
+            cursor: pointer;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 30px;
+            background: var(--button-bg);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.88rem;
+            font-family: var(--font-body);
+            letter-spacing: 0.3px;
+            color: #2d2d50;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            backdrop-filter: blur(4px);
+        }
+        button:hover {
+            background: var(--button-hover-bg);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+            transform: translateY(-1px);
+            border-color: rgba(91,106,240,0.2);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+        }
+        button.active-btn {
+            background: #eef0ff;
+            border-color: rgba(91,106,240,0.4);
+            color: #1e1e40;
+            font-weight: 700;
+        }
+
+        @media (max-width: 940px) {
+            .main-content {
+                flex-direction: column;
+                align-items: center;
+            }
+            .info-panel {
+                max-width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .info-card {
+                flex: 1 1 180px;
+                min-width: 170px;
+            }
+            .canvas-wrapper {
+                width: 100%;
+                max-width: 500px;
+            }
+            input[type="range"] {
+                width: 140px;
+            }
+        }
+        @media (max-width: 500px) {
+            .container {
+                padding: 18px 10px;
+            }
+            header h1 {
+                font-size: 1.5rem;
+            }
+            .controls {
+                gap: 10px;
+            }
+            input[type="range"] {
+                width: 100px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Supercritical Hopf Bifurcation</h1>
+            <p class="subtitle">
+                dx/dt = λx − y − x(x²+y²) &emsp;|&emsp; dy/dt = x + λy − y(x²+y²)
+            </p>
+        </header>
+
+        <div class="main-content">
+            <div class="canvas-wrapper">
+                <canvas id="phaseCanvas" width="600" height="600" aria-label="Phase portrait of the Hopf bifurcation"></canvas>
+            </div>
+
+            <aside class="info-panel">
+                <div class="info-card">
+                    <h3>📐 Eigenvalues</h3>
+                    <div class="info-row">
+                        <span class="info-label">Characteristic</span>
+                        <span class="info-value" id="eigenvalueDisplay">λ ± i</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Real part</span>
+                        <span class="info-value" id="realPartDisplay">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Imaginary part</span>
+                        <span class="info-value">±1</span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔍 Stability</h3>
+                    <div class="badge-container">
+                        <span class="stability-badge" id="stabilityBadge">—</span>
+                    </div>
+                    <div class="info-row limit-cycle-info" id="limitCycleRow" style="display:none;">
+                        <span class="info-label">Limit cycle radius</span>
+                        <span class="info-value" id="limitCycleRadius">—</span>
+                    </div>
+                    <p class="description" id="stabilityDescription">—</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>📋 Legend</h3>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <span class="legend-dot equilibrium"></span> Equilibrium (0,0)
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dash"></span> Limit cycle
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot direction-field"></span> Direction field
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="lambdaSlider">λ =</label>
+                <span class="lambda-display" id="lambdaDisplay">0.00</span>
+            </div>
+            <input type="range" id="lambdaSlider" min="-2" max="2" step="0.01" value="0" aria-label="Lambda parameter">
+            <span class="range-limit">-2</span>
+            <span class="range-limit">2</span>
+            <button id="playPauseBtn" class="active-btn" title="Play / Pause animation">⏸ Pause</button>
+            <button id="resetBtn" title="Reset all trajectories to start">↺ Reset</button>
+            <button id="clearBtn" title="Clear trail histories">🗑 Clear Trails</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            const canvas = document.getElementById('phaseCanvas');
+            const ctx = canvas.getContext('2d');
+            const lambdaSlider = document.getElementById('lambdaSlider');
+            const lambdaDisplay = document.getElementById('lambdaDisplay');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const eigenvalueDisplay = document.getElementById('eigenvalueDisplay');
+            const realPartDisplay = document.getElementById('realPartDisplay');
+            const stabilityBadge = document.getElementById('stabilityBadge');
+            const stabilityDescription = document.getElementById('stabilityDescription');
+            const limitCycleRow = document.getElementById('limitCycleRow');
+            const limitCycleRadius = document.getElementById('limitCycleRadius');
+
+            const CANVAS_SIZE = 600;
+            const SCALE = 100;
+            const CENTER_X = CANVAS_SIZE / 2;
+            const CENTER_Y = CANVAS_SIZE / 2;
+            const WORLD_MIN = -2.5;
+            const WORLD_MAX = 2.5;
+            const DIR_SPACING = 0.5;
+            const ARROW_LENGTH = 26;
+            const ARROWHEAD_SIZE = 6;
+            const RK4_DT = 0.04;
+            const MAX_TRAIL = 500;
+
+            let lambda = parseFloat(lambdaSlider.value);
+            let isPlaying = true;
+            let animationId = null;
+            let directionCache = null;
+            let cacheLambda = null;
+
+            // Deep blue colour for all trajectories
+            const TRAJECTORY_COLOR = '#1E3A8A';
+
+            const initialConditions = [
+                { x: 0.25, y: 0.0 },
+                { x: 0.6,  y: 0.1 },
+                { x: 1.2,  y:-0.3 },
+                { x: 2.0,  y: 0.5 },
+                { x:-0.5,  y: 0.55 },
+                { x:-1.8,  y:-1.0 },
+                { x: 0.15, y:-0.25 },
+                { x:-2.4,  y: 1.6 }
+            ];
+
+            let particles = [];
+
+            function worldToCanvas(wx, wy) {
+                return {
+                    cx: CENTER_X + wx * SCALE,
+                    cy: CENTER_Y - wy * SCALE
+                };
+            }
+
+            function isInView(wx, wy) {
+                return wx >= WORLD_MIN && wx <= WORLD_MAX && wy >= WORLD_MIN && wy <= WORLD_MAX;
+            }
+
+            function vectorField(x, y) {
+                const r2 = x * x + y * y;
+                return [
+                    lambda * x - y - x * r2,
+                    x + lambda * y - y * r2
+                ];
+            }
+
+            function rk4Step(x, y, dt) {
+                const [k1x, k1y] = vectorField(x, y);
+                const [k2x, k2y] = vectorField(x + 0.5*dt*k1x, y + 0.5*dt*k1y);
+                const [k3x, k3y] = vectorField(x + 0.5*dt*k2x, y + 0.5*dt*k2y);
+                const [k4x, k4y] = vectorField(x + dt*k3x, y + dt*k3y);
+                return {
+                    x: x + (dt/6)*(k1x + 2*k2x + 2*k3x + k4x),
+                    y: y + (dt/6)*(k1y + 2*k2y + 2*k3y + k4y)
+                };
+            }
+
+            function computeDirectionField() {
+                if (cacheLambda === lambda && directionCache) return directionCache;
+                const arrows = [];
+                const start = -2.5, end = 2.5;
+                for (let wx = start; wx <= end + 1e-6; wx += DIR_SPACING) {
+                    for (let wy = start; wy <= end + 1e-6; wy += DIR_SPACING) {
+                        const [vx, vy] = vectorField(wx, wy);
+                        const mag = Math.sqrt(vx*vx + vy*vy);
+                        if (mag < 1e-8) continue;
+                        const nx = vx / mag;
+                        const ny = vy / mag;
+                        const { cx, cy } = worldToCanvas(wx, wy);
+                        const cvx = nx * SCALE;
+                        const cvy = -ny * SCALE;
+                        const cMag = Math.sqrt(cvx*cvx + cvy*cvy);
+                        const sf = ARROW_LENGTH / cMag;
+                        arrows.push({
+                            cx, cy,
+                            endCx: cx + cvx * sf,
+                            endCy: cy + cvy * sf,
+                            dirX: cvx / cMag,
+                            dirY: cvy / cMag
+                        });
+                    }
+                }
+                directionCache = arrows;
+                cacheLambda = lambda;
+                return arrows;
+            }
+
+            function drawGrid() {
+                ctx.save();
+                ctx.strokeStyle = '#e8e8e8';
+                ctx.lineWidth = 0.7;
+                const minInt = Math.ceil(WORLD_MIN);
+                const maxInt = Math.floor(WORLD_MAX);
+                for (let i = minInt; i <= maxInt; i++) {
+                    const { cx } = worldToCanvas(i, 0);
+                    const { cy } = worldToCanvas(0, i);
+                    ctx.beginPath();
+                    ctx.moveTo(cx, 0);
+                    ctx.lineTo(cx, CANVAS_SIZE);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, cy);
+                    ctx.lineTo(CANVAS_SIZE, cy);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function drawAxes() {
+                ctx.save();
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1.2;
+                const xAxisY = worldToCanvas(0, 0).cy;
+                const yAxisX = worldToCanvas(0, 0).cx;
+                ctx.beginPath();
+                ctx.moveTo(0, xAxisY);
+                ctx.lineTo(CANVAS_SIZE, xAxisY);
+                ctx.moveTo(yAxisX, 0);
+                ctx.lineTo(yAxisX, CANVAS_SIZE);
+                ctx.stroke();
+
+                function arrowHead(cx, cy, angle) {
+                    const sz = 9;
+                    ctx.fillStyle = '#555';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx - sz*Math.cos(angle-0.45), cy - sz*Math.sin(angle-0.45));
+                    ctx.lineTo(cx - sz*Math.cos(angle+0.45), cy - sz*Math.sin(angle+0.45));
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                arrowHead(worldToCanvas(WORLD_MAX, 0).cx, xAxisY, 0);
+                arrowHead(yAxisX, worldToCanvas(0, WORLD_MAX).cy, -Math.PI/2);
+
+                ctx.fillStyle = '#333';
+                ctx.font = 'italic 13px "Inter", "Helvetica Neue", Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('x', CANVAS_SIZE-14, xAxisY-10);
+                ctx.fillText('y', yAxisX+14, 16);
+                ctx.font = '11px "Inter", "Helvetica Neue", Arial, sans-serif';
+                ctx.fillStyle = '#666';
+                for (let i = Math.ceil(WORLD_MIN); i <= Math.floor(WORLD_MAX); i++) {
+                    if (i === 0) continue;
+                    const tx = worldToCanvas(i, 0).cx;
+                    const ty = worldToCanvas(0, i).cy;
+                    ctx.fillText(i.toString(), tx, xAxisY+15);
+                    ctx.fillText(i.toString(), yAxisX-22, ty+4);
+                }
+                ctx.fillText('0', yAxisX-14, xAxisY+15);
+                ctx.restore();
+            }
+
+            function drawDirectionField() {
+                const arrows = computeDirectionField();
+                ctx.save();
+                ctx.strokeStyle = '#8899aa';
+                ctx.fillStyle = '#8899aa';
+                ctx.lineWidth = 1.0;
+                arrows.forEach(a => {
+                    ctx.beginPath();
+                    ctx.moveTo(a.cx, a.cy);
+                    ctx.lineTo(a.endCx, a.endCy);
+                    ctx.stroke();
+                    const angle = Math.atan2(a.dirY, a.dirX);
+                    ctx.beginPath();
+                    ctx.moveTo(a.endCx, a.endCy);
+                    ctx.lineTo(a.endCx - ARROWHEAD_SIZE*Math.cos(angle-0.55),
+                               a.endCy - ARROWHEAD_SIZE*Math.sin(angle-0.55));
+                    ctx.lineTo(a.endCx - ARROWHEAD_SIZE*Math.cos(angle+0.55),
+                               a.endCy - ARROWHEAD_SIZE*Math.sin(angle+0.55));
+                    ctx.closePath();
+                    ctx.fill();
+                });
+                ctx.restore();
+            }
+
+            function drawEquilibrium() {
+                const { cx, cy } = worldToCanvas(0, 0);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 7, 0, 2*Math.PI);
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3.5, 0, 2*Math.PI);
+                if (lambda < -0.005) ctx.fillStyle = '#2980b9';
+                else if (lambda > 0.005) ctx.fillStyle = '#c0392b';
+                else ctx.fillStyle = '#d4a017';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx, cy, 7, 0, 2*Math.PI);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawLimitCycle() {
+                if (lambda <= 0.001) return;
+                const radius = Math.sqrt(lambda);
+                if (radius > WORLD_MAX) return;
+                const { cx, cy } = worldToCanvas(0, 0);
+                ctx.save();
+                ctx.setLineDash([8, 5]);
+                ctx.strokeStyle = '#27ae60';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * SCALE, 0, 2*Math.PI);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                if (radius < WORLD_MAX - 0.3) {
+                    const lbl = worldToCanvas(radius*0.75, radius*0.75);
+                    ctx.fillStyle = '#1a6b3a';
+                    ctx.font = 'italic 11px "Inter", sans-serif';
+                    ctx.fillText('r = √λ', lbl.cx-18, lbl.cy-8);
+                }
+                ctx.restore();
+            }
+
+            function drawTrajectories() {
+                particles.forEach(p => {
+                    const trail = p.trail;
+                    if (trail.length < 2) {
+                        if (trail.length === 1 && isInView(trail[0].x, trail[0].y)) {
+                            const { cx, cy } = worldToCanvas(trail[0].x, trail[0].y);
+                            ctx.beginPath();
+                            ctx.arc(cx, cy, 3, 0, 2*Math.PI);
+                            ctx.fillStyle = p.color;
+                            ctx.fill();
+                        }
+                        return;
+                    }
+                    ctx.save();
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 1.8;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.globalAlpha = 0.85;
+                    ctx.beginPath();
+                    const first = worldToCanvas(trail[0].x, trail[0].y);
+                    ctx.moveTo(first.cx, first.cy);
+                    for (let i = 1; i < trail.length; i++) {
+                        const pt = worldToCanvas(trail[i].x, trail[i].y);
+                        ctx.lineTo(pt.cx, pt.cy);
+                    }
+                    ctx.stroke();
+                    const head = worldToCanvas(p.x, p.y);
+                    ctx.globalAlpha = 1;
+                    ctx.beginPath();
+                    ctx.arc(head.cx, head.cy, 3.5, 0, 2*Math.PI);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                ctx.fillStyle = '#fdfdfd';
+                ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                drawGrid();
+                drawDirectionField();
+                drawLimitCycle();
+                drawAxes();
+                drawEquilibrium();
+                drawTrajectories();
+            }
+
+            function advanceParticles() {
+                particles.forEach(p => {
+                    const next = rk4Step(p.x, p.y, RK4_DT);
+                    p.x = next.x;
+                    p.y = next.y;
+                    p.trail.push({ x: p.x, y: p.y });
+                    if (p.trail.length > MAX_TRAIL) p.trail.shift();
+                });
+            }
+
+            function animate() {
+                if (!isPlaying) {
+                    render();
+                    animationId = null;
+                    return;
+                }
+                advanceParticles();
+                render();
+                animationId = requestAnimationFrame(animate);
+            }
+
+            function startAnimation() {
+                if (animationId) cancelAnimationFrame(animationId);
+                animationId = isPlaying ? requestAnimationFrame(animate) : (render(), null);
+            }
+
+            function updateInfo() {
+                lambdaDisplay.textContent = lambda.toFixed(2);
+                lambdaDisplay.className = 'lambda-display';
+                if (lambda < -0.005) lambdaDisplay.classList.add('lambda-neg');
+                else if (lambda > 0.005) lambdaDisplay.classList.add('lambda-pos');
+                else lambdaDisplay.classList.add('lambda-zero');
+
+                eigenvalueDisplay.textContent = `${lambda.toFixed(2)} + i`.replace('+ -', '− ');
+                realPartDisplay.textContent = lambda.toFixed(2);
+
+                stabilityBadge.className = 'stability-badge';
+                if (lambda < -0.005) {
+                    stabilityBadge.textContent = 'Stable Spiral (Sink)';
+                    stabilityBadge.classList.add('stable-spiral');
+                    stabilityDescription.textContent =
+                        'The origin is a stable spiral. All trajectories spiral inward toward the equilibrium.';
+                    limitCycleRow.style.display = 'none';
+                } else if (lambda > 0.005) {
+                    stabilityBadge.textContent = 'Unstable Spiral (Source)';
+                    stabilityBadge.classList.add('unstable-spiral');
+                    const rLC = Math.sqrt(lambda);
+                    stabilityDescription.textContent =
+                        `The origin is an unstable spiral. A stable limit cycle exists at radius r = √λ ≈ ${rLC.toFixed(3)}. ` +
+                        'Trajectories spiral outward from the origin, or inward from outside, toward the limit cycle.';
+                    limitCycleRow.style.display = 'flex';
+                    limitCycleRadius.textContent = `r = √λ ≈ ${rLC.toFixed(3)}`;
+                } else {
+                    stabilityBadge.textContent = 'Hopf Bifurcation Point';
+                    stabilityBadge.classList.add('hopf-point');
+                    stabilityDescription.textContent =
+                        'Bifurcation point (λ = 0). Eigenvalues ±i (purely imaginary). The origin is a centre in the linearisation, ' +
+                        'but asymptotically stable due to cubic damping (r\' = -r³). A limit cycle emerges for λ > 0.';
+                    limitCycleRow.style.display = 'none';
+                }
+            }
+
+            function onLambdaChange() {
+                lambda = parseFloat(lambdaSlider.value);
+                directionCache = null;
+                cacheLambda = null;
+                updateInfo();
+                render();
+            }
+
+            function togglePlayPause() {
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    playPauseBtn.textContent = '⏸ Pause';
+                    playPauseBtn.classList.add('active-btn');
+                } else {
+                    playPauseBtn.textContent = '▶ Play';
+                    playPauseBtn.classList.remove('active-btn');
+                }
+                startAnimation();
+            }
+
+            function resetAll() {
+                particles = initialConditions.map(ic => ({
+                    x: ic.x,
+                    y: ic.y,
+                    trail: [{ x: ic.x, y: ic.y }],
+                    color: TRAJECTORY_COLOR
+                }));
+                directionCache = null;
+                cacheLambda = null;
+                updateInfo();
+                render();
+                if (isPlaying && !animationId) startAnimation();
+            }
+
+            function clearTrails() {
+                particles.forEach(p => {
+                    p.trail = [{ x: p.x, y: p.y }];
+                });
+                render();
+                if (isPlaying && !animationId) startAnimation();
+            }
+
+            function init() {
+                particles = initialConditions.map(ic => ({
+                    x: ic.x,
+                    y: ic.y,
+                    trail: [{ x: ic.x, y: ic.y }],
+                    color: TRAJECTORY_COLOR
+                }));
+                lambda = parseFloat(lambdaSlider.value);
+                updateInfo();
+                render();
+                startAnimation();
+            }
+
+            lambdaSlider.addEventListener('input', onLambdaChange);
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            resetBtn.addEventListener('click', resetAll);
+            clearBtn.addEventListener('click', clearTrails);
+            document.addEventListener('keydown', e => {
+                if (e.code === 'Space' && e.target === document.body) {
+                    e.preventDefault();
+                    togglePlayPause();
+                }
+            });
+
+            init();
+        })();
+    </script>
+</body>
+</html>
